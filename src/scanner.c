@@ -57,7 +57,7 @@ StringScanner_init(StringScanner *self, PyObject *args, PyObject *kwds)
     static char *kwlist[] = {"string", NULL};
 
     if (! PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, &string))
-        return -1; 
+        return -1;
 
     if (string) {
         tmp = self->string;
@@ -69,6 +69,12 @@ StringScanner_init(StringScanner *self, PyObject *args, PyObject *kwds)
     return 0;
 }
 
+PyObject *
+StringScanner_scan(StringScanner *self, PyObject *args)
+{
+}
+
+
 static PyMemberDef StringScanner_members[] = {
     {"string", T_OBJECT_EX, offsetof(StringScanner, string), 0, "string"},
     {"match_history", T_OBJECT_EX, offsetof(StringScanner, match_history), 0, "match_history"},
@@ -79,6 +85,7 @@ static PyMemberDef StringScanner_members[] = {
 };
 
 static PyMethodDef StringScanner_methods[] = {
+    METHOD(StringScanner, scan, METH_VARARGS),
     {NULL}  /* Sentinel */
 };
 
@@ -132,7 +139,7 @@ static PyMethodDef scanner_methods[] = {
 #define PyMODINIT_FUNC void
 #endif
 PyMODINIT_FUNC
-initscanner(void) 
+initscanner(void)
 {
     PyObject* m;
 
