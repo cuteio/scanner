@@ -69,7 +69,7 @@ StringScanner_init(StringScanner *self, PyObject *args, PyObject *kwds)
     return 0;
 }
 
-PyObject *
+static PyObject *
 StringScanner_scan(StringScanner *self, PyObject *args)
 {
 }
@@ -85,7 +85,7 @@ static PyMemberDef StringScanner_members[] = {
 };
 
 static PyMethodDef StringScanner_methods[] = {
-    METHOD(StringScanner, scan, METH_VARARGS),
+    //METHOD(StringScanner, scan, METH_VARARGS),
     {NULL}  /* Sentinel */
 };
 
