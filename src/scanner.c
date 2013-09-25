@@ -1,49 +1,82 @@
 #include <Python.h>
-#include <regex.h>
-#include "structmember.h"
+#include <structmember.h>
 #include "scanner.h"
 
-typedef struct {
-    PyObject_HEAD
-    PyObject *string;
-    PyObject *match_history;
-    PyObject *match;
-    PyObject *pos_history;
-    int *pos;
-} StringScanner;
+#define MATCHED_P(s)          ((s)->flags & FLAG_MATCHED)
+#define MATCHED(s)             (s)->flags |= FLAG_MATCHED
+#define CLEAR_MATCH_STATUS(s)  (s)->flags &= ~FLAG_MATCHED
+
+#define S_PBEG(s)  (PyString_AS_STRING((s)->str))
+#define S_LEN(s)  (PyString_GET_SIZE((s)->str))
+#define S_PEND(s)  (S_PBEG(s) + S_LEN(s))
+#define CURPTR(s) (S_PBEG(s) + (s)->curr)
+#define S_RESTLEN(s) (S_LEN(s) - (s)->curr)
+
+#define EOS_P(s) ((s)->curr >= PyString_GET_SIZE(p->str))
+
+extern PyTypeObject scanner_StringRegexpType;
+static PyObject *ScanError;
+
+static PyObject *
+infect(PyObject *str, strscanner *p)
+{
+    // TODO: infect
+    //OBJ_INFECT(str, p->str);
+    return str;
+}
+
+static PyObject *
+str_new(strscanner *p, const char *ptr, long len)
+{
+    // TODO: check p->str encode
+    PyObject *str = PyString_FromStringAndSize(ptr, len);
+    //rb_enc_copy(str, p->str);
+    return str;
+}
+
+static PyObject *
+extract_range(strscanner *p, long beg_i, long end_i)
+{
+    if (beg_i > S_LEN(p)) return Py_None;
+    if (end_i > S_LEN(p))
+        end_i = S_LEN(p);
+    return infect(str_new(p, S_PBEG(p) + beg_i, end_i - beg_i), p);
+}
+
+static PyObject *
+extract_beg_len(strscanner *p, long beg_i, long len)
+{
+    if (beg_i > S_LEN(p)) return Py_None;
+    if (beg_i + len > S_LEN(p))
+        len = S_LEN(p) - beg_i;
+    return infect(str_new(p, S_PBEG(p) + beg_i, len), p);
+}
 
 static void
 StringScanner_dealloc(StringScanner* self)
 {
-    Py_XDECREF(self->string);
-    Py_XDECREF(self->match_history);
-    Py_XDECREF(self->match);
-    Py_XDECREF(self->pos_history);
+    strscanner *p = self->p;
+    onig_region_free(&(p->regs), 0);
+    PyMem_Free(p);
     self->ob_type->tp_free((PyObject*)self);
 }
 
 static PyObject *
 StringScanner_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
+    strscanner *p;
     StringScanner *self;
 
     self = (StringScanner *)type->tp_alloc(type, 0);
     if (self != NULL) {
-        self->string = PyString_FromString("");
-        if (self->string == NULL)
-        {
-            Py_DECREF(self);
-            return NULL;
-        }
+        p = (strscanner *)PyMem_Malloc(sizeof (strscanner));
+        if (p == NULL)
+            return PyErr_NoMemory();
 
-        self->match = PyString_FromString("");
-        if (self->match == NULL)
-        {
-            Py_DECREF(self);
-            return NULL;
-        }
-
-        self->pos = 0;
+        CLEAR_MATCH_STATUS(p);
+        onig_region_init(&(p->regs));
+        p->str = Py_None;
+        self->p = p;
     }
 
     return (PyObject *)self;
@@ -52,35 +85,96 @@ StringScanner_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 static int
 StringScanner_init(StringScanner *self, PyObject *args, PyObject *kwds)
 {
-    PyObject *string=NULL, *tmp;
+    strscanner *p;
+    PyObject *string=NULL;
+    PyObject *dup=NULL;
+    static char *kwlist[] = {"string", "dup", NULL};
 
-    static char *kwlist[] = {"string", NULL};
-
-    if (! PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, &string))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O", kwlist, &string, &dup))
         return -1;
 
+    p = self->p;
     if (string) {
-        tmp = self->string;
         Py_INCREF(string);
-        self->string = string;
-        Py_XDECREF(tmp);
+        p->str = string;
     }
 
     return 0;
 }
 
 static PyObject *
-StringScanner_scan(StringScanner *self, PyObject *args)
+strscan_do_scan(StringScanner *self, StringRegexp *regexp, int cuccptr, int getstr, int headonly)
 {
+    strscanner *p;
+    regex_t *re;
+    long ret;
+    int tmpreg;
+
+    //Check_Type(regex, T_REGEXP);
+    //GET_SCANNER(self, p);
+    p = self->p;
+
+    CLEAR_MATCH_STATUS(p);
+    if (S_RESTLEN(p) < 0) {
+        return Py_None;
+    }
+
+    p->regex = regexp->regex;
+    re = regexp->regex;
+
+    if (headonly) {
+        ret = onig_match(re, (UChar* )CURPTR(p),
+                         (UChar* )(CURPTR(p) + S_RESTLEN(p)),
+                         (UChar* )CURPTR(p), &(p->regs), ONIG_OPTION_NONE);
+    } else {
+        ret = onig_search(re,
+                          (UChar* )CURPTR(p), (UChar* )(CURPTR(p) + S_RESTLEN(p)),
+                          (UChar* )CURPTR(p), (UChar* )(CURPTR(p) + S_RESTLEN(p)),
+                          &(p->regs), ONIG_OPTION_NONE);
+    }
+    //if (!tmpreg) RREGEXP(regex)->usecnt--;
+    //if (tmpreg) {
+    //    if (RREGEXP(regex)->usecnt) {
+    //        onig_free(re);
+    //    } else {
+    //        onig_free(RREGEXP(regex)->ptr);
+    //        RREGEXP(regex)->ptr = re;
+    //    }
+    //}
+
+    if (ret == -2) {
+        PyErr_SetString(ScanError, "regexp buffer overflow");
+        return NULL;
+    }
+
+    if (ret < 0) {
+        /* not matched */
+        return Py_None;
+    }
+
+    MATCHED(p);
+    p->prev = p->curr;
+    if (cuccptr) {
+        p->curr += p->regs.end[0];
+    }
+    if (getstr) {
+        return extract_beg_len(p, p->prev, p->regs.end[0]);
+    }
+    else {
+        return PyInt_FromLong(p->regs.end[0]);
+    }
 }
 
+static PyObject *
+StringScanner_scan(StringScanner *self, PyObject *args)
+{
+    PyObject *regexp;
+    if (!PyArg_ParseTuple(args, "O!", &scanner_StringRegexpType, &regexp))
+        return NULL;
+    return strscan_do_scan(self, (StringRegexp *)regexp, 1, 1, 1);
+}
 
 static PyMemberDef StringScanner_members[] = {
-    {"string", T_OBJECT_EX, offsetof(StringScanner, string), 0, "string"},
-    {"match_history", T_OBJECT_EX, offsetof(StringScanner, match_history), 0, "match_history"},
-    {"match", T_OBJECT_EX, offsetof(StringScanner, match), 0, "match"},
-    {"pos_history", T_OBJECT_EX, offsetof(StringScanner, pos_history), 0, "pos_history"},
-    {"pos", T_INT, offsetof(StringScanner, pos), 0, "StringScanner pos"},
     {NULL}  /* Sentinel */
 };
 
@@ -149,7 +243,11 @@ initscanner(void)
 
     m = Py_InitModule3("scanner", scanner_methods,
                        "scanner module that creates an extension type.");
-
     Py_INCREF(&scanner_StringScannerType);
+
+    ScanError = PyErr_NewException("scanner.error", NULL, NULL);
+    Py_INCREF(ScanError);
+
+    PyModule_AddObject(m, "Error", ScanError);
     PyModule_AddObject(m, "StringScanner", (PyObject *)&scanner_StringScannerType);
 }

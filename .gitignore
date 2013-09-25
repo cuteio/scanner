@@ -34,5 +34,5 @@ nosetests.xml
 .project
 .pydevproject
 vendor/onig-*
-vendor/libonig.la
+vendor/libonig.a
 !vendor/onig-*.tar.gz
