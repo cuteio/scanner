@@ -179,7 +179,7 @@ static PyMemberDef StringScanner_members[] = {
 };
 
 static PyMethodDef StringScanner_methods[] = {
-    //METHOD(StringScanner, scan, METH_VARARGS),
+    {"scan", (PyCFunction)StringScanner_scan, METH_VARARGS, "scan"},
     {NULL}  /* Sentinel */
 };
 
@@ -237,17 +237,21 @@ initscanner(void)
 {
     PyObject* m;
 
-    scanner_StringScannerType.tp_new = PyType_GenericNew;
     if (PyType_Ready(&scanner_StringScannerType) < 0)
+        return;
+
+    if (PyType_Ready(&scanner_StringRegexpType) < 0)
         return;
 
     m = Py_InitModule3("scanner", scanner_methods,
                        "scanner module that creates an extension type.");
     Py_INCREF(&scanner_StringScannerType);
+    Py_INCREF(&scanner_StringRegexpType);
 
     ScanError = PyErr_NewException("scanner.error", NULL, NULL);
     Py_INCREF(ScanError);
 
     PyModule_AddObject(m, "Error", ScanError);
     PyModule_AddObject(m, "StringScanner", (PyObject *)&scanner_StringScannerType);
+    PyModule_AddObject(m, "StringRegexp", (PyObject *)&scanner_StringRegexpType);
 }

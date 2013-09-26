@@ -161,7 +161,7 @@ static PyMethodDef StringRegexp_methods[] = {
     {NULL}  /* Sentinel */
 };
 
-static PyTypeObject scanner_StringRegexpType = {
+PyTypeObject scanner_StringRegexpType = {
     PyObject_HEAD_INIT(NULL)
     0,                                         /*ob_size*/
     "scanner.StringRegexp",                     /*tp_name*/
