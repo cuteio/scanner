@@ -73,6 +73,7 @@ StringScanner_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
         if (p == NULL)
             return PyErr_NoMemory();
 
+        memset(p, 0, sizeof (strscanner));
         CLEAR_MATCH_STATUS(p);
         onig_region_init(&(p->regs));
         p->str = Py_None;
@@ -174,12 +175,24 @@ StringScanner_scan(StringScanner *self, PyObject *args)
     return strscan_do_scan(self, (StringRegexp *)regexp, 1, 1, 1);
 }
 
-static PyMemberDef StringScanner_members[] = {
+static PyMethodDef StringScanner_methods[] = {
+    {"scan", (PyCFunction)StringScanner_scan, METH_VARARGS, "scan"},
     {NULL}  /* Sentinel */
 };
 
-static PyMethodDef StringScanner_methods[] = {
-    {"scan", (PyCFunction)StringScanner_scan, METH_VARARGS, "scan"},
+static PyObject *
+StringScanner_pos__get__(StringScanner *self)
+{
+    strscanner *p = self->p;
+    return PyInt_FromLong(p->curr);
+}
+
+static PyGetSetDef StringScanner_getsetter[] = {
+    {"pos", (getter) StringScanner_pos__get__, NULL, "pos", NULL},
+    {NULL}
+};
+
+static PyMemberDef StringScanner_members[] = {
     {NULL}  /* Sentinel */
 };
 
@@ -214,7 +227,7 @@ static PyTypeObject scanner_StringScannerType = {
     0,                                         /* tp_iternext */
     StringScanner_methods,                     /* tp_methods */
     StringScanner_members,                     /* tp_members */
-    0,                                         /* tp_getset */
+    StringScanner_getsetter,                   /* tp_getset */
     0,                                         /* tp_base */
     0,                                         /* tp_dict */
     0,                                         /* tp_descr_get */
