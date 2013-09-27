@@ -33,3 +33,6 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+vendor/onig-*
+vendor/libonig.a
+!vendor/onig-*.tar.gz
