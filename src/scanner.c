@@ -103,6 +103,38 @@ StringScanner_init(StringScanner *self, PyObject *args, PyObject *kwds)
     return 0;
 }
 
+/*
+ * Reset the scan pointer (index 0) and clear matching data.
+ */
+static PyObject *
+StringScanner_reset(StringScanner *self)
+{
+    strscanner *p;
+
+    p = self->p;
+    p->curr = 0;
+    CLEAR_MATCH_STATUS(p);
+    return (PyObject *)self;
+}
+
+/*
+ * call-seq:
+ *   terminate
+ *   clear
+ *
+ * Set the scan pointer to the end of the string and clear matching data.
+ */
+static PyObject *
+StringScanner_terminate(StringScanner *self)
+{
+    strscanner *p;
+
+    p = self->p;
+    p->curr = S_LEN(p);
+    CLEAR_MATCH_STATUS(p);
+    return (PyObject *)self;
+}
+
 static PyObject *
 strscan_do_scan(StringScanner *self, StringRegexp *regexp, int cuccptr, int getstr, int headonly)
 {
@@ -160,8 +192,7 @@ strscan_do_scan(StringScanner *self, StringRegexp *regexp, int cuccptr, int gets
     }
     if (getstr) {
         return extract_beg_len(p, p->prev, p->regs.end[0]);
-    }
-    else {
+    } else {
         return PyInt_FromLong(p->regs.end[0]);
     }
 }
@@ -263,7 +294,7 @@ StringScanner_scan_full(StringScanner *self, PyObject *args)
     PyObject *py_f;
     int s = 0;
     int f = 0;
-    if (!PyArg_ParseTuple(args, "O!|O!O!", &scanner_StringRegexpType, &regexp, &PyBool_Type, &s, &PyBool_Type, &f))
+    if (!PyArg_ParseTuple(args, "O!|O!O!", &scanner_StringRegexpType, &regexp, &PyBool_Type, &py_s, &PyBool_Type, &py_f))
         return NULL;
     if (py_s == Py_True)
         s = 1;
@@ -380,7 +411,7 @@ StringScanner_search_full(StringScanner *self, PyObject *args)
     PyObject *py_f;
     int s = 0;
     int f = 0;
-    if (!PyArg_ParseTuple(args, "O!|O!O!", &scanner_StringRegexpType, &regexp, &PyBool_Type, &s, &PyBool_Type, &f))
+    if (!PyArg_ParseTuple(args, "O!|O!O!", &scanner_StringRegexpType, &regexp, &PyBool_Type, &py_s, &PyBool_Type, &py_f))
         return NULL;
     if (py_s == Py_True)
         s = 1;
@@ -562,6 +593,8 @@ StringScanner_matched_size(StringScanner *self)
 }
 
 static PyMethodDef StringScanner_methods[] = {
+    {"reset", (PyCFunction)StringScanner_scan, METH_NOARGS, "reset"},
+    {"terminate", (PyCFunction)StringScanner_terminate, METH_NOARGS, "terminate"},
     {"scan", (PyCFunction)StringScanner_scan, METH_VARARGS, "scan"},
     {"match_count", (PyCFunction)StringScanner_match_p, METH_VARARGS, "match_count"},
     {"skip", (PyCFunction)StringScanner_skip, METH_VARARGS, "skip"},
@@ -572,7 +605,7 @@ static PyMethodDef StringScanner_methods[] = {
     {"check_until", (PyCFunction)StringScanner_check_until, METH_VARARGS, "check_until"},
     {"search_full", (PyCFunction)StringScanner_search_full, METH_VARARGS, "search_full"},
     {"peek", (PyCFunction)StringScanner_peek, METH_VARARGS, "peek"},
-    {"unscan", (PyCFunction)StringScanner_peek, METH_NOARGS, "peek"},
+    {"unscan", (PyCFunction)StringScanner_unscan, METH_NOARGS, "scan"},
     {NULL}  /* Sentinel */
 };
 
@@ -604,15 +637,82 @@ StringScanner_pos__set__(StringScanner *self, PyObject *v)
     return PyInt_FromLong(i);
 }
 
+/*
+ * Returns the string being scanned.
+ */
+static PyObject *
+StringScanner_string__get__(StringScanner *self)
+{
+    strscanner *p;
+
+    p = self->p;
+    return p->str;
+}
+
+/*
+ * call-seq: string=(str)
+ *
+ * Changes the string being scanned to +str+ and resets the scanner.
+ * Returns +str+.
+ */
+static PyObject *
+StringScanner_string__set__(StringScanner *self, PyObject *str)
+{
+    // TODO: string setter
+    //struct strscanner *p = check_strscan(self);
+
+    //StringValue(str);
+    //p->str = str;
+    //p->curr = 0;
+    //CLEAR_MATCH_STATUS(p);
+    return str;
+}
+
+/*
+ * Returns the "rest" of the string (i.e. everything after the scan pointer).
+ * If there is no more data (eos? = true), it returns <tt>""</tt>.
+ */
+static PyObject *
+StringScanner_rest__get__(StringScanner *self)
+{
+    strscanner *p;
+
+    p = self->p;
+    if (EOS_P(p)) {
+        return infect(str_new(p, "", 0), p);
+    }
+    return extract_range(p, p->curr, S_LEN(p));
+}
+
+/*
+ * <tt>s.rest_size</tt> is equivalent to <tt>s.rest.size</tt>.
+ */
+static PyObject *
+StringScanner_rest_size__get__(StringScanner *self)
+{
+    strscanner *p;
+    long i;
+
+    p = self->p;
+    if (EOS_P(p)) {
+        return PyInt_FromLong(0);
+    }
+    i = S_LEN(p) - p->curr;
+    return PyInt_FromLong(i);
+}
+
 static PyGetSetDef StringScanner_getsetter[] = {
     {"pos", (getter) StringScanner_pos__get__, (setter) StringScanner_pos__set__, "pos", NULL},
     {"bol", (getter) StringScanner_bol_p, NULL, "bol", NULL},
     {"eos", (getter) StringScanner_eos_p, NULL, "eos", NULL},
-    {"rest", (getter) StringScanner_rest_p, NULL, "rest", NULL},
     {"is_matched", (getter) StringScanner_matched_p, NULL, "is_matched", NULL},
     {"matched", (getter) StringScanner_matched, NULL, "matched", NULL},
     {"matched_size", (getter) StringScanner_matched_size, NULL, "matched_size", NULL},
     {"exist", (getter) StringScanner_exist_p, NULL, "exist", NULL},
+    {"string", (getter) StringScanner_string__get__, NULL, "string", NULL},
+    {"is_rest", (getter) StringScanner_rest_p, NULL, "is_rest", NULL},
+    {"rest", (getter) StringScanner_rest__get__, NULL, "rest", NULL},
+    {"rest_size", (getter) StringScanner_rest_size__get__, NULL, "rest_size", NULL},
     {NULL}
 };
 
