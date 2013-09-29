@@ -21,8 +21,8 @@ if popen.returncode != 0:
     print(stderrdata)
     sys.exit()
 
-if sys.platform == 'linux':
-    configure_options = ['./configure', '--disable-shared', '--with-gnu-ld']
+if sys.platform.startswith('linux'):
+    configure_options = ['./configure', '--disable-shared', '--with-pic']
 else:
     configure_options = ['./configure', '--disable-shared']
 
@@ -32,12 +32,14 @@ stdoutdata, stderrdata = popen.communicate()
 if popen.returncode != 0:
     print(stderrdata)
     sys.exit()
+print(stdoutdata)
 
 popen = Popen(['make'], stdout=PIPE, stderr=PIPE)
 stdoutdata, stderrdata = popen.communicate()
 if popen.returncode != 0:
     print(stderrdata)
     sys.exit()
+print(stdoutdata)
 
 shutil.copy('.libs/libonig.a', libonig_dir)
 os.chdir(cwd)
