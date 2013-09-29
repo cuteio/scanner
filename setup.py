@@ -21,8 +21,13 @@ if popen.returncode != 0:
     print(stderrdata)
     sys.exit()
 
+if sys.platform == 'linux':
+    configure_options = ['./configure', '--disable-shared', '--with-gnu-ld']
+else:
+    configure_options = ['./configure', '--disable-shared']
+
 os.chdir(libonig_dir + '/onig-5.9.4')
-popen = Popen(['./configure', '--disable-shared'], stdout=PIPE, stderr=PIPE)
+popen = Popen(configure_options, stdout=PIPE, stderr=PIPE)
 stdoutdata, stderrdata = popen.communicate()
 if popen.returncode != 0:
     print(stderrdata)
