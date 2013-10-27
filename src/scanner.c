@@ -287,19 +287,20 @@ StringScanner_check(StringScanner *self, PyObject *args)
  * "full" means "#scan with full parameters".
  */
 static PyObject *
-StringScanner_scan_full(StringScanner *self, PyObject *args)
+StringScanner_scan_full(StringScanner *self, PyObject *args, PyObject *kwds)
 {
-    PyObject *regexp;
-    PyObject *py_s;
-    PyObject *py_f;
-    int s = 0;
-    int f = 0;
-    if (!PyArg_ParseTuple(args, "O!|O!O!", &scanner_StringRegexpType, &regexp, &PyBool_Type, &py_s, &PyBool_Type, &py_f))
+    PyObject *regexp = NULL;
+    PyObject *py_s = NULL;
+    PyObject *py_f = NULL;
+    int s = 1;
+    int f = 1;
+    static char *kwlist[] = {"regex", "advance_pointer", "return_string", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|O!O!", kwlist, &scanner_StringRegexpType, &regexp, &PyBool_Type, &py_s, &PyBool_Type, &py_f))
         return NULL;
-    if (py_s == Py_True)
-        s = 1;
-    if (py_f == Py_True)
-        f = 1;
+    if (py_s == Py_False)
+        s = 0;
+    if (py_f == Py_False)
+        f = 0;
     return strscan_do_scan(self, (StringRegexp *)regexp, s, f, 1);
 }
 
@@ -404,19 +405,20 @@ StringScanner_check_until(StringScanner *self, PyObject *args)
  * This method does affect the match register.
  */
 static PyObject *
-StringScanner_search_full(StringScanner *self, PyObject *args)
+StringScanner_search_full(StringScanner *self, PyObject *args, PyObject *kwds)
 {
-    PyObject *regexp;
-    PyObject *py_s;
-    PyObject *py_f;
-    int s = 0;
-    int f = 0;
-    if (!PyArg_ParseTuple(args, "O!|O!O!", &scanner_StringRegexpType, &regexp, &PyBool_Type, &py_s, &PyBool_Type, &py_f))
+    PyObject *regexp = NULL;
+    PyObject *py_s = NULL;
+    PyObject *py_f = NULL;
+    int s = 1;
+    int f = 1;
+    static char *kwlist[] = {"regex", "advance_pointer", "return_string", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|O!O!", kwlist, &scanner_StringRegexpType, &regexp, &PyBool_Type, &py_s, &PyBool_Type, &py_f))
         return NULL;
-    if (py_s == Py_True)
-        s = 1;
-    if (py_f == Py_True)
-        f = 1;
+    if (py_s == Py_False)
+        s = 0;
+    if (py_f == Py_False)
+        f = 0;
     return strscan_do_scan(self, (StringRegexp *)regexp, s, f, 0);
 }
 
@@ -592,6 +594,124 @@ StringScanner_matched_size(StringScanner *self)
     return PyInt_FromLong(p->regs.end[0] - p->regs.beg[0]);
 }
 
+/*
+ * Return the <i><b>pre</b>-match</i> (in the regular expression sense) of the last scan.
+ *
+ *   s = StringScanner.new('test string')
+ *   s.scan(/\w+/)           # -> "test"
+ *   s.scan(/\s+/)           # -> " "
+ *   s.pre_match             # -> "test"
+ *   s.post_match            # -> "string"
+ */
+static PyObject *
+StringScanner_pre_match(StringScanner *self)
+{
+    strscanner *p;
+
+    p = self->p;
+    if (! MATCHED_P(p)) return Py_None;
+    return extract_range(p, 0, p->prev + p->regs.beg[0]);
+}
+
+/*
+ * Return the <i><b>post</b>-match</i> (in the regular expression sense) of the last scan.
+ *
+ *   s = StringScanner.new('test string')
+ *   s.scan(/\w+/)           # -> "test"
+ *   s.scan(/\s+/)           # -> " "
+ *   s.pre_match             # -> "test"
+ *   s.post_match            # -> "string"
+ */
+static PyObject *
+StringScanner_post_match(StringScanner *self)
+{
+    strscanner *p;
+
+    p = self->p;
+    if (! MATCHED_P(p)) return Py_None;
+    return extract_range(p, p->prev + p->regs.end[0], S_LEN(p));
+}
+
+static void
+adjust_registers_to_matched(strscanner *p)
+{
+    onig_region_clear(&(p->regs));
+    onig_region_set(&(p->regs), 0, 0, (int)(p->curr - p->prev));
+}
+
+/*
+ * Scans one character and returns it.
+ * This method is multibyte character sensitive.
+ *
+ *   s = StringScanner.new("ab")
+ *   s.getch           # => "a"
+ *   s.getch           # => "b"
+ *   s.getch           # => nil
+ *
+ *   $KCODE = 'EUC'
+ *   s = StringScanner.new("\244\242")
+ *   s.getch           # => "\244\242"   # Japanese hira-kana "A" in EUC-JP
+ *   s.getch           # => nil
+ */
+static PyObject *
+StringScanner_getch(StringScanner *self)
+{
+    strscanner *p;
+    long len;
+
+    p = self->p;
+    CLEAR_MATCH_STATUS(p);
+    if (EOS_P(p))
+        return Py_None;
+
+    // FIXME: unicode
+    //len = rb_enc_mbclen(CURPTR(p), S_PEND(p), rb_enc_get(p->str));
+    //if (p->curr + len > S_LEN(p)) {
+    //    len = S_LEN(p) - p->curr;
+    //}
+    len = 1; // FIX
+    p->prev = p->curr;
+    p->curr += len;
+    MATCHED(p);
+    adjust_registers_to_matched(p);
+    return extract_range(p, p->prev + p->regs.beg[0],
+                            p->prev + p->regs.end[0]);
+}
+
+/*
+ * Scans one byte and returns it.
+ * This method is not multibyte character sensitive.
+ * See also: #getch.
+ *
+ *   s = StringScanner.new('ab')
+ *   s.get_byte         # => "a"
+ *   s.get_byte         # => "b"
+ *   s.get_byte         # => nil
+ *
+ *   $KCODE = 'EUC'
+ *   s = StringScanner.new("\244\242")
+ *   s.get_byte         # => "\244"
+ *   s.get_byte         # => "\242"
+ *   s.get_byte         # => nil
+ */
+static PyObject *
+StringScanner_get_byte(StringScanner *self)
+{
+    strscanner *p;
+
+    p = self->p;
+    CLEAR_MATCH_STATUS(p);
+    if (EOS_P(p))
+        return Py_None;
+
+    p->prev = p->curr;
+    p->curr++;
+    MATCHED(p);
+    adjust_registers_to_matched(p);
+    return extract_range(p, p->prev + p->regs.beg[0],
+                            p->prev + p->regs.end[0]);
+}
+
 static PyMethodDef StringScanner_methods[] = {
     {"reset", (PyCFunction)StringScanner_scan, METH_NOARGS, "reset"},
     {"terminate", (PyCFunction)StringScanner_terminate, METH_NOARGS, "terminate"},
@@ -599,13 +719,18 @@ static PyMethodDef StringScanner_methods[] = {
     {"match_count", (PyCFunction)StringScanner_match_p, METH_VARARGS, "match_count"},
     {"skip", (PyCFunction)StringScanner_skip, METH_VARARGS, "skip"},
     {"check", (PyCFunction)StringScanner_check, METH_VARARGS, "check"},
-    {"scan_full", (PyCFunction)StringScanner_scan_full, METH_VARARGS, "scan_full"},
+    {"scan_full", (PyCFunction)StringScanner_scan_full, METH_VARARGS | METH_KEYWORDS, "scan_full"},
     {"scan_until", (PyCFunction)StringScanner_scan_until, METH_VARARGS, "scan_until"},
     {"skip_until", (PyCFunction)StringScanner_skip_until, METH_VARARGS, "skip_until"},
     {"check_until", (PyCFunction)StringScanner_check_until, METH_VARARGS, "check_until"},
-    {"search_full", (PyCFunction)StringScanner_search_full, METH_VARARGS, "search_full"},
+    {"search_full", (PyCFunction)StringScanner_search_full, METH_VARARGS | METH_KEYWORDS, "search_full"},
     {"peek", (PyCFunction)StringScanner_peek, METH_VARARGS, "peek"},
-    {"unscan", (PyCFunction)StringScanner_unscan, METH_NOARGS, "scan"},
+    {"unscan", (PyCFunction)StringScanner_unscan, METH_NOARGS, "unscan"},
+    {"getch", (PyCFunction)StringScanner_getch, METH_NOARGS, "getch"},
+    {"get_byte", (PyCFunction)StringScanner_get_byte, METH_NOARGS, "get_byte"},
+    {"exist", (PyCFunction)StringScanner_exist_p, METH_VARARGS, "exist"},
+    {"pre_match", (PyCFunction)StringScanner_pre_match, METH_NOARGS, "pre_match"},
+    {"post_match", (PyCFunction)StringScanner_post_match, METH_NOARGS, "post_match"},
     {NULL}  /* Sentinel */
 };
 
@@ -708,7 +833,6 @@ static PyGetSetDef StringScanner_getsetter[] = {
     {"is_matched", (getter) StringScanner_matched_p, NULL, "is_matched", NULL},
     {"matched", (getter) StringScanner_matched, NULL, "matched", NULL},
     {"matched_size", (getter) StringScanner_matched_size, NULL, "matched_size", NULL},
-    {"exist", (getter) StringScanner_exist_p, NULL, "exist", NULL},
     {"string", (getter) StringScanner_string__get__, NULL, "string", NULL},
     {"is_rest", (getter) StringScanner_rest_p, NULL, "is_rest", NULL},
     {"rest", (getter) StringScanner_rest__get__, NULL, "rest", NULL},
