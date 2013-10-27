@@ -592,6 +592,44 @@ StringScanner_matched_size(StringScanner *self)
     return PyInt_FromLong(p->regs.end[0] - p->regs.beg[0]);
 }
 
+/*
+ * Return the <i><b>pre</b>-match</i> (in the regular expression sense) of the last scan.
+ *
+ *   s = StringScanner.new('test string')
+ *   s.scan(/\w+/)           # -> "test"
+ *   s.scan(/\s+/)           # -> " "
+ *   s.pre_match             # -> "test"
+ *   s.post_match            # -> "string"
+ */
+static PyObject *
+StringScanner_pre_match(StringScanner *self)
+{
+    strscanner *p;
+
+    p = self->p;
+    if (! MATCHED_P(p)) return Py_None;
+    return extract_range(p, 0, p->prev + p->regs.beg[0]);
+}
+
+/*
+ * Return the <i><b>post</b>-match</i> (in the regular expression sense) of the last scan.
+ *
+ *   s = StringScanner.new('test string')
+ *   s.scan(/\w+/)           # -> "test"
+ *   s.scan(/\s+/)           # -> " "
+ *   s.pre_match             # -> "test"
+ *   s.post_match            # -> "string"
+ */
+static PyObject *
+StringScanner_post_match(StringScanner *self)
+{
+    strscanner *p;
+
+    p = self->p;
+    if (! MATCHED_P(p)) return Py_None;
+    return extract_range(p, p->prev + p->regs.end[0], S_LEN(p));
+}
+
 static void
 adjust_registers_to_matched(strscanner *p)
 {
@@ -689,6 +727,8 @@ static PyMethodDef StringScanner_methods[] = {
     {"getch", (PyCFunction)StringScanner_getch, METH_NOARGS, "getch"},
     {"get_byte", (PyCFunction)StringScanner_get_byte, METH_NOARGS, "get_byte"},
     {"exist", (PyCFunction)StringScanner_exist_p, METH_VARARGS, "exist"},
+    {"pre_match", (PyCFunction)StringScanner_pre_match, METH_NOARGS, "pre_match"},
+    {"post_match", (PyCFunction)StringScanner_post_match, METH_NOARGS, "post_match"},
     {NULL}  /* Sentinel */
 };
 

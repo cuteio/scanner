@@ -41,14 +41,16 @@ class TestScanner(unittest.TestCase):
         assert 'hel' == s.matched
 
     def test_pre_match(self):
-        pass
-        #s = self.strscan
-        #assert 2 == s.skip('he')
-        #assert 'll' == s.scan('ll')
-        #assert 'he' == s.pre_match
+        s = self.strscan
+        assert 2 == s.skip(StringRegexp('he'))
+        assert 'll' == s.scan(StringRegexp('ll'))
+        assert 'he' == s.pre_match()
 
     def test_post_match(self):
-        pass
+        s = self.strscan
+        s.skip(StringRegexp('he'))
+        s.scan(StringRegexp('ll'))
+        assert 'o' == s.post_match()
 
     def test_unscan(self):
         s = self.strscan
@@ -79,6 +81,14 @@ class TestScanner(unittest.TestCase):
         #assert 2 == s.pos
         #assert 2 == s.scan_full(StringRegexp('ll'), return_string=False, advance_pointer=False)
         #assert 2 == s.pos
+
+    #def test_search_full(self):
+    #    s = self.strscan
+    #    assert 'he' == s.search_full('e')
+    #    assert 2 == s.pos
+    #    assert 'llo' == s.search_full('lo', advance_pointer=False)
+    #    assert 2 == s.pos
+    #    assert 3 == s.search_full('o', return_string=False, advance_pointer=False)
 
     def test_scan(self):
         s = self.strscan
