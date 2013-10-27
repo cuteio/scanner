@@ -287,19 +287,20 @@ StringScanner_check(StringScanner *self, PyObject *args)
  * "full" means "#scan with full parameters".
  */
 static PyObject *
-StringScanner_scan_full(StringScanner *self, PyObject *args)
+StringScanner_scan_full(StringScanner *self, PyObject *args, PyObject *kwds)
 {
-    PyObject *regexp;
-    PyObject *py_s;
-    PyObject *py_f;
-    int s = 0;
-    int f = 0;
-    if (!PyArg_ParseTuple(args, "O!|O!O!", &scanner_StringRegexpType, &regexp, &PyBool_Type, &py_s, &PyBool_Type, &py_f))
+    PyObject *regexp = NULL;
+    PyObject *py_s = NULL;
+    PyObject *py_f = NULL;
+    int s = 1;
+    int f = 1;
+    static char *kwlist[] = {"regex", "advance_pointer", "return_string", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|O!O!", kwlist, &scanner_StringRegexpType, &regexp, &PyBool_Type, &py_s, &PyBool_Type, &py_f))
         return NULL;
-    if (py_s == Py_True)
-        s = 1;
-    if (py_f == Py_True)
-        f = 1;
+    if (py_s == Py_False)
+        s = 0;
+    if (py_f == Py_False)
+        f = 0;
     return strscan_do_scan(self, (StringRegexp *)regexp, s, f, 1);
 }
 
@@ -404,19 +405,20 @@ StringScanner_check_until(StringScanner *self, PyObject *args)
  * This method does affect the match register.
  */
 static PyObject *
-StringScanner_search_full(StringScanner *self, PyObject *args)
+StringScanner_search_full(StringScanner *self, PyObject *args, PyObject *kwds)
 {
-    PyObject *regexp;
-    PyObject *py_s;
-    PyObject *py_f;
-    int s = 0;
-    int f = 0;
-    if (!PyArg_ParseTuple(args, "O!|O!O!", &scanner_StringRegexpType, &regexp, &PyBool_Type, &py_s, &PyBool_Type, &py_f))
+    PyObject *regexp = NULL;
+    PyObject *py_s = NULL;
+    PyObject *py_f = NULL;
+    int s = 1;
+    int f = 1;
+    static char *kwlist[] = {"regex", "advance_pointer", "return_string", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|O!O!", kwlist, &scanner_StringRegexpType, &regexp, &PyBool_Type, &py_s, &PyBool_Type, &py_f))
         return NULL;
-    if (py_s == Py_True)
-        s = 1;
-    if (py_f == Py_True)
-        f = 1;
+    if (py_s == Py_False)
+        s = 0;
+    if (py_f == Py_False)
+        f = 0;
     return strscan_do_scan(self, (StringRegexp *)regexp, s, f, 0);
 }
 
@@ -717,11 +719,11 @@ static PyMethodDef StringScanner_methods[] = {
     {"match_count", (PyCFunction)StringScanner_match_p, METH_VARARGS, "match_count"},
     {"skip", (PyCFunction)StringScanner_skip, METH_VARARGS, "skip"},
     {"check", (PyCFunction)StringScanner_check, METH_VARARGS, "check"},
-    {"scan_full", (PyCFunction)StringScanner_scan_full, METH_VARARGS, "scan_full"},
+    {"scan_full", (PyCFunction)StringScanner_scan_full, METH_VARARGS | METH_KEYWORDS, "scan_full"},
     {"scan_until", (PyCFunction)StringScanner_scan_until, METH_VARARGS, "scan_until"},
     {"skip_until", (PyCFunction)StringScanner_skip_until, METH_VARARGS, "skip_until"},
     {"check_until", (PyCFunction)StringScanner_check_until, METH_VARARGS, "check_until"},
-    {"search_full", (PyCFunction)StringScanner_search_full, METH_VARARGS, "search_full"},
+    {"search_full", (PyCFunction)StringScanner_search_full, METH_VARARGS | METH_KEYWORDS, "search_full"},
     {"peek", (PyCFunction)StringScanner_peek, METH_VARARGS, "peek"},
     {"unscan", (PyCFunction)StringScanner_unscan, METH_NOARGS, "unscan"},
     {"getch", (PyCFunction)StringScanner_getch, METH_NOARGS, "getch"},

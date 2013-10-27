@@ -75,20 +75,20 @@ class TestScanner(unittest.TestCase):
         # TODO: scan_full default args
         s = self.strscan
         assert None == s.scan_full(StringRegexp("l"))
-        assert 'he' == s.scan_full(StringRegexp("he"), True, True)
+        assert 'he' == s.scan_full(StringRegexp("he"))
         assert 2 == s.pos
-        #assert 'll' == s.scan_full(StringRegexp('ll'), advance_pointer=False)
-        #assert 2 == s.pos
-        #assert 2 == s.scan_full(StringRegexp('ll'), return_string=False, advance_pointer=False)
-        #assert 2 == s.pos
+        assert 'll' == s.scan_full(StringRegexp('ll'), advance_pointer=False)
+        assert 2 == s.pos
+        assert 2 == s.scan_full(StringRegexp('ll'), advance_pointer=False, return_string=False)
+        assert 2 == s.pos
 
-    #def test_search_full(self):
-    #    s = self.strscan
-    #    assert 'he' == s.search_full('e')
-    #    assert 2 == s.pos
-    #    assert 'llo' == s.search_full('lo', advance_pointer=False)
-    #    assert 2 == s.pos
-    #    assert 3 == s.search_full('o', return_string=False, advance_pointer=False)
+    def test_search_full(self):
+        s = self.strscan
+        assert 'he' == s.search_full(StringRegexp('e'))
+        assert 2 == s.pos
+        assert 'llo' == s.search_full(StringRegexp('lo'), advance_pointer=False)
+        assert 2 == s.pos
+        assert 3 == s.search_full(StringRegexp('o'), advance_pointer=False, return_string=False)
 
     def test_scan(self):
         s = self.strscan
