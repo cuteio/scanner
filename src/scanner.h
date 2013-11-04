@@ -39,6 +39,9 @@ typedef struct {
     strscanner *p;
 } StringScanner;
 
+int regexp_init(StringRegexp *, PyObject *);
+void regexp_delloc(StringRegexp *);
+
 #ifdef __cplusplus
 }
 #endif
