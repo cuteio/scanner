@@ -25,6 +25,8 @@ typedef struct {
 
     /* regexp used for last scan */
     regex_t *regex;
+
+    int unicode;
 } strscanner;
 
 typedef struct {
@@ -38,6 +40,9 @@ typedef struct {
     PyObject_HEAD
     strscanner *p;
 } StringScanner;
+
+int regexp_init(StringRegexp *, PyObject *);
+void regexp_delloc(StringRegexp *);
 
 #ifdef __cplusplus
 }

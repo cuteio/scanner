@@ -76,10 +76,16 @@ get_onig_syntax(int syntax)
 static void
 StringRegexp_dealloc(StringRegexp *self)
 {
+    regexp_delloc(self);
+    self->ob_type->tp_free((PyObject*)self);
+}
+
+void
+regexp_delloc(StringRegexp *self)
+{
     if (self->regex)
         onig_free(self->regex);
     Py_XDECREF(self->pattern);
-    self->ob_type->tp_free((PyObject*)self);
 }
 
 static PyObject *
@@ -97,8 +103,8 @@ StringRegexp_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     return (PyObject *)self;
 }
 
-static int
-StringRegexp_init(StringRegexp *self, PyObject *args, PyObject *kwds)
+int
+regexp_init(StringRegexp *self, PyObject *pattern)
 {
     int ienc = -1, isyn = 10, rv;
     OnigOptionType options = ONIG_OPTION_NONE;
@@ -106,13 +112,6 @@ StringRegexp_init(StringRegexp *self, PyObject *args, PyObject *kwds)
     OnigEncodingType *enc;
     OnigErrorInfo einfo;
     UChar *pstr, *pend;
-    PyObject *pattern=NULL;
-    PyObject *tmp;
-
-    static char *kwlist[] = {"pattern", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &pattern))
-        return -1;
 
     if (PyUnicode_Check(pattern)) {
         //enc = UNICODE_ENCODING;
@@ -121,6 +120,7 @@ StringRegexp_init(StringRegexp *self, PyObject *args, PyObject *kwds)
         pend = pstr + (PyUnicode_GET_SIZE(pattern) * sizeof(PY_UNICODE_TYPE));
         self->unicode = 1;
     } else if (PyString_Check(pattern)) {
+        /* FIXME: to unicode */
         if (ienc == -1) ienc = 0;
         enc = get_onig_encoding(ienc);
         pstr = (UChar *) PyString_AS_STRING(pattern);
@@ -150,6 +150,18 @@ StringRegexp_init(StringRegexp *self, PyObject *args, PyObject *kwds)
     }
 
     return 0;
+}
+
+static int
+StringRegexp_init(StringRegexp *self, PyObject *args, PyObject *kwds)
+{
+    PyObject *pattern=NULL;
+    static char *kwlist[] = {"pattern", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &pattern))
+        return -1;
+
+    return regexp_init(self, pattern);
 }
 
 static PyMemberDef StringRegexp_members[] = {
