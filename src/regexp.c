@@ -120,6 +120,7 @@ regexp_init(StringRegexp *self, PyObject *pattern)
         pend = pstr + (PyUnicode_GET_SIZE(pattern) * sizeof(PY_UNICODE_TYPE));
         self->unicode = 1;
     } else if (PyString_Check(pattern)) {
+        /* FIXME: to unicode */
         if (ienc == -1) ienc = 0;
         enc = get_onig_encoding(ienc);
         pstr = (UChar *) PyString_AS_STRING(pattern);

@@ -6,16 +6,93 @@
 #define MATCHED(s)             (s)->flags |= FLAG_MATCHED
 #define CLEAR_MATCH_STATUS(s)  (s)->flags &= ~FLAG_MATCHED
 
+/*
 #define S_PBEG(s)  (PyString_AS_STRING((s)->str))
 #define S_LEN(s)  (PyString_GET_SIZE((s)->str))
 #define S_PEND(s)  (S_PBEG(s) + S_LEN(s))
 #define CURPTR(s) (S_PBEG(s) + (s)->curr)
 #define S_RESTLEN(s) (S_LEN(s) - (s)->curr)
-
 #define EOS_P(s) ((s)->curr >= PyString_GET_SIZE(p->str))
+*/
+
+#define S_PBEG(s)  (scanner_pbeg(s))
+#define S_LEN(s)  (scanner_len(s))
+#define S_PEND(s)  (scanner_pend(s))
+#define CURPTR(s) (scanner_pcur(s))
+#define S_RESTLEN(s) (scanner_restlen(s))
+#define EOS_P(s) (scanner_eos(s))
+
 
 extern PyTypeObject scanner_StringRegexpType;
 static PyObject *ScanError;
+
+static UChar *
+scanner_pbeg(strscanner *p)
+{
+    UChar *rc = NULL;
+    if (p->unicode)
+        rc = (UChar *)PyUnicode_AS_UNICODE(p->str);
+    else
+        rc = (UChar *)PyString_AS_STRING(p->str);
+    return rc;
+}
+
+static Py_ssize_t
+scanner_len(strscanner *p)
+{
+    Py_ssize_t rc = -1;
+    if (p->unicode)
+        rc = PyUnicode_GET_SIZE(p->str);
+    else
+        rc = PyString_GET_SIZE(p->str);
+    return rc;
+}
+
+static UChar *
+scanner_pend(strscanner *p)
+{
+    return scanner_pbeg(p) + scanner_len(p);
+}
+
+static UChar *
+scanner_pcur(strscanner *p)
+{
+    UChar *rc = NULL;
+    if (p->unicode)
+        rc = scanner_pbeg(p) + (sizeof(Py_UNICODE) * p->curr);
+    else
+        rc = scanner_pbeg(p) + p->curr;
+    return rc;
+}
+
+static Py_ssize_t
+scanner_restlen(strscanner *p)
+{
+    Py_ssize_t rc = -1;
+    if (p->unicode)
+        rc = scanner_len(p) - (sizeof(Py_UNICODE) * p->curr);
+    else
+        rc = scanner_len(p) - p->curr;
+    return rc;
+}
+
+static Py_ssize_t
+scanner_eos(strscanner *p)
+{
+    Py_ssize_t rc = -1;
+    if (p->unicode) {
+        if ((sizeof(Py_UNICODE) * p->curr) >= scanner_len(p))
+            rc = 1;
+        else
+            rc = 0;
+    } else {
+        if (p->curr >= scanner_len(p))
+            rc = 1;
+        else
+            rc = 0;
+    }
+    return rc;
+}
 
 static PyObject *
 infect(PyObject *str, strscanner *p)
@@ -86,6 +163,7 @@ StringScanner_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 static int
 StringScanner_init(StringScanner *self, PyObject *args, PyObject *kwds)
 {
+    int rc = 0;
     strscanner *p;
     PyObject *string=NULL;
     PyObject *dup=NULL;
@@ -95,12 +173,21 @@ StringScanner_init(StringScanner *self, PyObject *args, PyObject *kwds)
         return -1;
 
     p = self->p;
-    if (string) {
+    p->str = string;
+    if (PyString_Check(string)) {
+        p->unicode = 0;
         Py_INCREF(string);
-        p->str = string;
+    } else if (PyUnicode_Check(string)) {
+        p->unicode = 1;
+        Py_INCREF(string);
+    } else {
+        Py_DECREF(self);
+        PyErr_SetString(PyExc_TypeError, "string to match must be "
+                "string or unicode");
+        rc = -1;
     }
 
-    return 0;
+    return rc;
 }
 
 /*
@@ -136,24 +223,37 @@ StringScanner_terminate(StringScanner *self)
 }
 
 static PyObject *
-strscan_do_scan(StringScanner *self, StringRegexp *regexp, int cuccptr, int getstr, int headonly)
+_strscan_do_scan(StringScanner *self, StringRegexp *regexp, int cuccptr, int getstr, int headonly)
 {
     strscanner *p;
     regex_t *re;
     long ret;
-    int tmpreg;
+    PyObject *string;
 
     //Check_Type(regex, T_REGEXP);
     //GET_SCANNER(self, p);
     p = self->p;
 
     CLEAR_MATCH_STATUS(p);
+    p->regex = regexp->regex;
+    re = regexp->regex;
+    string = p->str;
+
+    if (p->unicode) {
+        if (!regexp->unicode) {
+            PyErr_SetString(ScanError, "regexp is PyString, but scanner string is PyUnicode");
+            return NULL;
+        }
+    } else {
+        if (regexp->unicode) {
+            PyErr_SetString(ScanError, "regexp is PyUnicode, but scanner string is PyString");
+            return NULL;
+        }
+    }
+
     if (S_RESTLEN(p) < 0) {
         return Py_None;
     }
-
-    p->regex = regexp->regex;
-    re = regexp->regex;
 
     if (headonly) {
         ret = onig_match(re, (UChar* )CURPTR(p),
@@ -165,15 +265,6 @@ strscan_do_scan(StringScanner *self, StringRegexp *regexp, int cuccptr, int gets
                           (UChar* )CURPTR(p), (UChar* )(CURPTR(p) + S_RESTLEN(p)),
                           &(p->regs), ONIG_OPTION_NONE);
     }
-    //if (!tmpreg) RREGEXP(regex)->usecnt--;
-    //if (tmpreg) {
-    //    if (RREGEXP(regex)->usecnt) {
-    //        onig_free(re);
-    //    } else {
-    //        onig_free(RREGEXP(regex)->ptr);
-    //        RREGEXP(regex)->ptr = re;
-    //    }
-    //}
 
     if (ret == -2) {
         PyErr_SetString(ScanError, "regexp buffer overflow");
@@ -198,10 +289,59 @@ strscan_do_scan(StringScanner *self, StringRegexp *regexp, int cuccptr, int gets
 }
 
 static PyObject *
+strscan_do_scan(StringScanner *self, PyObject *string, int cuccptr, int getstr, int headonly)
+{
+    int tmpreg = 0;
+    strscanner *p;
+    PyObject *rc = NULL;
+    StringRegexp *regexp = NULL;
+    p = self->p;
+
+    if (PyString_Check(string)) {
+        tmpreg = 1;
+        if (p->unicode) {
+            /* Encode using default encoding. */
+            string = PyUnicode_FromEncodedObject(string, NULL, NULL);
+            if (!string)
+                return rc;
+        }
+    } else if (PyUnicode_Check(string)) {
+        tmpreg = 1;
+        if (!p->unicode) {
+            /* Decode using default encoding. */
+            string = PyUnicode_AsEncodedString(string, NULL, NULL);
+            if (!string)
+                return rc;
+        }
+    } else if (PyObject_TypeCheck(string, &scanner_StringRegexpType)) {
+        regexp = (StringRegexp *) string;
+    } else {
+        PyErr_SetString(PyExc_TypeError, "pattern must be string or unicode");
+        return rc;
+    }
+
+
+    if (tmpreg) {
+        regexp = PyObject_New(StringRegexp, &scanner_StringRegexpType);
+        if (regexp_init(regexp, string) < 0)
+            return rc;
+    }
+
+    rc = _strscan_do_scan(self, regexp, cuccptr, getstr, headonly);
+
+    if (tmpreg) {
+        regexp_delloc(regexp);
+        PyObject_Del(regexp);
+    }
+
+    return rc;
+}
+
+static PyObject *
 StringScanner_scan(StringScanner *self, PyObject *args)
 {
     PyObject *regexp;
-    if (!PyArg_ParseTuple(args, "O!", &scanner_StringRegexpType, &regexp))
+    if (!PyArg_ParseTuple(args, "O", &regexp))
         return NULL;
     return strscan_do_scan(self, (StringRegexp *)regexp, 1, 1, 1);
 }
@@ -221,7 +361,7 @@ static PyObject *
 StringScanner_match_p(StringScanner *self, PyObject *args)
 {
     PyObject *regexp;
-    if (!PyArg_ParseTuple(args, "O!", &scanner_StringRegexpType, &regexp))
+    if (!PyArg_ParseTuple(args, "O", &regexp))
         return NULL;
     return strscan_do_scan(self, (StringRegexp *)regexp, 0, 0, 1);
 }
@@ -247,7 +387,7 @@ static PyObject *
 StringScanner_skip(StringScanner *self, PyObject *args)
 {
     PyObject *regexp;
-    if (!PyArg_ParseTuple(args, "O!", &scanner_StringRegexpType, &regexp))
+    if (!PyArg_ParseTuple(args, "O", &regexp))
         return NULL;
     return strscan_do_scan(self, (StringRegexp *)regexp, 1, 0, 1);
 }
@@ -271,7 +411,7 @@ static PyObject *
 StringScanner_check(StringScanner *self, PyObject *args)
 {
     PyObject *regexp;
-    if (!PyArg_ParseTuple(args, "O!", &scanner_StringRegexpType, &regexp))
+    if (!PyArg_ParseTuple(args, "O", &regexp))
         return NULL;
     return strscan_do_scan(self, (StringRegexp *)regexp, 0, 1, 1);
 }
@@ -295,7 +435,7 @@ StringScanner_scan_full(StringScanner *self, PyObject *args, PyObject *kwds)
     int s = 1;
     int f = 1;
     static char *kwlist[] = {"regex", "advance_pointer", "return_string", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|O!O!", kwlist, &scanner_StringRegexpType, &regexp, &PyBool_Type, &py_s, &PyBool_Type, &py_f))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O!O!", kwlist, &regexp, &PyBool_Type, &py_s, &PyBool_Type, &py_f))
         return NULL;
     if (py_s == Py_False)
         s = 0;
@@ -320,7 +460,7 @@ static PyObject *
 StringScanner_scan_until(StringScanner *self, PyObject *args)
 {
     PyObject *regexp;
-    if (!PyArg_ParseTuple(args, "O!", &scanner_StringRegexpType, &regexp))
+    if (!PyArg_ParseTuple(args, "O", &regexp))
         return NULL;
     return strscan_do_scan(self, (StringRegexp *)regexp, 1, 1, 0);
 }
@@ -342,7 +482,7 @@ static PyObject *
 StringScanner_exist_p(StringScanner *self, PyObject *args)
 {
     PyObject *regexp;
-    if (!PyArg_ParseTuple(args, "O!", &scanner_StringRegexpType, &regexp))
+    if (!PyArg_ParseTuple(args, "O", &regexp))
         return NULL;
     return strscan_do_scan(self, (StringRegexp *)regexp, 0, 0, 0);
 }
@@ -367,7 +507,7 @@ static PyObject *
 StringScanner_skip_until(StringScanner *self, PyObject *args)
 {
     PyObject *regexp;
-    if (!PyArg_ParseTuple(args, "O!", &scanner_StringRegexpType, &regexp))
+    if (!PyArg_ParseTuple(args, "O", &regexp))
         return NULL;
     return strscan_do_scan(self, (StringRegexp *)regexp, 1, 0, 0);
 }
@@ -390,7 +530,7 @@ static PyObject *
 StringScanner_check_until(StringScanner *self, PyObject *args)
 {
     PyObject *regexp;
-    if (!PyArg_ParseTuple(args, "O!", &scanner_StringRegexpType, &regexp))
+    if (!PyArg_ParseTuple(args, "O", &regexp))
         return NULL;
     return strscan_do_scan(self, (StringRegexp *)regexp, 0, 1, 0);
 }
@@ -413,7 +553,7 @@ StringScanner_search_full(StringScanner *self, PyObject *args, PyObject *kwds)
     int s = 1;
     int f = 1;
     static char *kwlist[] = {"regex", "advance_pointer", "return_string", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O!|O!O!", kwlist, &scanner_StringRegexpType, &regexp, &PyBool_Type, &py_s, &PyBool_Type, &py_f))
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|O!O!", kwlist, &regexp, &PyBool_Type, &py_s, &PyBool_Type, &py_f))
         return NULL;
     if (py_s == Py_False)
         s = 0;

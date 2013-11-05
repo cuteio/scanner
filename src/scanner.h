@@ -25,6 +25,8 @@ typedef struct {
 
     /* regexp used for last scan */
     regex_t *regex;
+
+    int unicode;
 } strscanner;
 
 typedef struct {
