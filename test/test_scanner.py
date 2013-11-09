@@ -9,20 +9,23 @@ class TestScanner(unittest.TestCase):
         self.string = 'hello'
         self.strscan = StringScanner(self.string)
 
-    def tearDown(self):
-        pass
-
     def test_eos(self):
+        # FIXME 为什么去掉 is, 明明是 is_eos
         assert self.strscan.eos == False
+        # FIXME terminate 不要括号那
         self.strscan.terminate()
+        # FIXME is
         assert self.strscan.eos == True
 
     def test_getch(self):
         s = self.strscan
         pos = s.pos
+        # FIXME 为什么 getch 又括号
         assert 'h' == s.getch()
         assert s.pos == (pos + 1)
+        # FIXME 括号
         s.getch()
+        # FIXME ()
         assert 'l' == s.getch()
 
     def test_peek(self):
@@ -32,11 +35,13 @@ class TestScanner(unittest.TestCase):
 
     def test_rest(self):
         s = self.strscan
+        # FIXME 这里真的不能判断一下传进来的类型么，一定要先 Regex 吗
         s.scan(StringRegexp('hel'))
         assert self.string == s.string
 
     def test_matched(self):
         s = self.strscan
+        # FIXME 这里真的不能判断一下传进来的类型么，一定要先 Regex 吗
         s.scan(StringRegexp('hel'))
         assert 'hel' == s.matched
 
@@ -44,36 +49,44 @@ class TestScanner(unittest.TestCase):
         s = self.strscan
         assert 2 == s.skip(StringRegexp('he'))
         assert 'll' == s.scan(StringRegexp('ll'))
+        # FIXME 又括号
         assert 'he' == s.pre_match()
 
     def test_post_match(self):
         s = self.strscan
         s.skip(StringRegexp('he'))
         s.scan(StringRegexp('ll'))
+        # FIXME 括号
         assert 'o' == s.post_match()
 
     def test_unscan(self):
         s = self.strscan
         s.skip(StringRegexp('he'))
         assert 'llo' == s.rest
+        # FIXME 括号
         s.unscan()
         assert 0 == s.pos
         assert self.string == s.string
 
     def test_is_beginning_of_line(self):
         s = self.strscan
+        # FIXME 你为什么偷偷的用这样的缩写，还以为是 bool 呢
         assert s.bol == True
 
     def test_terminate(self):
         s = self.strscan
+        # FIXME 下面2个括号
         s.getch()
         s.terminate()
         assert s.pos == len(self.string)
-        #assert s.match == None  # what is "match"?
+        # FIXME match 丢了吗
+        # match 就是原本的 self._match 呀，初始时为 None,
+        # 后边是匹配到的结果呀呀呀
+        # assert s.match == None  # what is "match"?
 
     def test_scan_full(self):
-        # TODO: scan_full default args
         s = self.strscan
+        # FIXME 你看看，下面这么多都要显式的变成 regex 多不好看
         assert None == s.scan_full(StringRegexp("l"))
         assert 'he' == s.scan_full(StringRegexp("he"))
         assert 2 == s.pos
@@ -84,6 +97,7 @@ class TestScanner(unittest.TestCase):
 
     def test_search_full(self):
         s = self.strscan
+        # FIXME 同上
         assert 'he' == s.search_full(StringRegexp('e'))
         assert 2 == s.pos
         assert 'llo' == s.search_full(StringRegexp('lo'), advance_pointer=False)
@@ -93,6 +107,7 @@ class TestScanner(unittest.TestCase):
     def test_scan(self):
         s = self.strscan
         assert 0 == s.pos
+        # FIXME 同 ls
         s.scan(StringRegexp('world'))
         s.scan(StringRegexp('luo'))
         assert 0 == s.pos
@@ -105,6 +120,9 @@ class TestScanner(unittest.TestCase):
         assert 3 == s.pos
 
     # what is "upto"?
+    # FIXME 就是跳到匹配的位置，但是不匹配跳过的内容呀
+    # See https://github.com/liluo/linguist/blob/master/linguist/libs/strscan.py
+    # FIXME 上面那个 url 是我在火车上写的，不知道有没有写错地址
     #def test_scan_upto(self):
     #    s = self.strscan
     #    assert 'h' == s.scan('h')
@@ -131,9 +149,32 @@ class TestScanner(unittest.TestCase):
         assert 0 == s.pos
 
     def test_exist(self):
+        # FIXME 你偷偷的改名字，明明就是 exists
         s = self.strscan
         assert 3 == s.exist(StringRegexp('l'))
         assert 0 == s.pos
+
+    # FIXME 我把你偷懒的 2 个 unittext 也拿过来的，检查一下 coords 嘛
+    # def test_coords(self):
+    #     s = StringScanner("abcdef\nghijkl\nmnopqr\nstuvwx\nyz")
+    #     assert (0, 0, "abcdef") == s.coords
+    #     s.pos += 4
+    #     assert (0, 4, 'abcdef') == s.coords
+    #     s.pos += 2
+    #     assert (0, 6, 'abcdef') == s.coords
+    #     s.pos += 1
+    #     assert (1, 0, 'ghijkl') == s.coords
+    #     s.pos += 8
+    #     assert (2, 1, 'mnopqr') == s.coords
+
+    # def test_text_coords(self):
+    #     s = "abcdef\nghijkl\nmnopqr\nstuvwx\nyz"
+    #     assert (0, 0, 'abcdef') == text_coords(s, 0)
+    #     assert (0, 4, 'abcdef') == text_coords(s, 4)
+    #     assert (0, 6, 'abcdef') == text_coords(s, 6)
+    #     assert (1, 0, 'ghijkl') == text_coords(s, 7)
+    #     assert (1, 4, 'ghijkl') == text_coords(s, 11)
+    #     assert (2, 1, 'mnopqr') == text_coords(s, 15)
 
 if __name__ == '__main__':
     unittest.main()
