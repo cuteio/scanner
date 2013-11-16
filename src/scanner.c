@@ -212,7 +212,7 @@ StringScanner_reset(StringScanner *self)
  * Set the scan pointer to the end of the string and clear matching data.
  */
 static PyObject *
-StringScanner_terminate(StringScanner *self)
+StringScanner_terminate_p(StringScanner *self)
 {
     strscanner *p;
 
@@ -343,7 +343,7 @@ StringScanner_scan(StringScanner *self, PyObject *args)
     PyObject *regexp;
     if (!PyArg_ParseTuple(args, "O", &regexp))
         return NULL;
-    return strscan_do_scan(self, (StringRegexp *)regexp, 1, 1, 1);
+    return strscan_do_scan(self, regexp, 1, 1, 1);
 }
 
 /*
@@ -363,7 +363,7 @@ StringScanner_match_p(StringScanner *self, PyObject *args)
     PyObject *regexp;
     if (!PyArg_ParseTuple(args, "O", &regexp))
         return NULL;
-    return strscan_do_scan(self, (StringRegexp *)regexp, 0, 0, 1);
+    return strscan_do_scan(self, regexp, 0, 0, 1);
 }
 
 /*
@@ -389,7 +389,7 @@ StringScanner_skip(StringScanner *self, PyObject *args)
     PyObject *regexp;
     if (!PyArg_ParseTuple(args, "O", &regexp))
         return NULL;
-    return strscan_do_scan(self, (StringRegexp *)regexp, 1, 0, 1);
+    return strscan_do_scan(self, regexp, 1, 0, 1);
 }
 
 /*
@@ -413,7 +413,7 @@ StringScanner_check(StringScanner *self, PyObject *args)
     PyObject *regexp;
     if (!PyArg_ParseTuple(args, "O", &regexp))
         return NULL;
-    return strscan_do_scan(self, (StringRegexp *)regexp, 0, 1, 1);
+    return strscan_do_scan(self, regexp, 0, 1, 1);
 }
 
 /*
@@ -441,7 +441,7 @@ StringScanner_scan_full(StringScanner *self, PyObject *args, PyObject *kwds)
         s = 0;
     if (py_f == Py_False)
         f = 0;
-    return strscan_do_scan(self, (StringRegexp *)regexp, s, f, 1);
+    return strscan_do_scan(self, regexp, s, f, 1);
 }
 
 /*
@@ -462,7 +462,7 @@ StringScanner_scan_until(StringScanner *self, PyObject *args)
     PyObject *regexp;
     if (!PyArg_ParseTuple(args, "O", &regexp))
         return NULL;
-    return strscan_do_scan(self, (StringRegexp *)regexp, 1, 1, 0);
+    return strscan_do_scan(self, regexp, 1, 1, 0);
 }
 
 /*
@@ -479,12 +479,12 @@ StringScanner_scan_until(StringScanner *self, PyObject *args)
  *   s.exist? /e/            # -> nil
  */
 static PyObject *
-StringScanner_exist_p(StringScanner *self, PyObject *args)
+StringScanner_exists_p(StringScanner *self, PyObject *args)
 {
     PyObject *regexp;
     if (!PyArg_ParseTuple(args, "O", &regexp))
         return NULL;
-    return strscan_do_scan(self, (StringRegexp *)regexp, 0, 0, 0);
+    return strscan_do_scan(self, regexp, 0, 0, 0);
 }
 
 /*
@@ -509,7 +509,7 @@ StringScanner_skip_until(StringScanner *self, PyObject *args)
     PyObject *regexp;
     if (!PyArg_ParseTuple(args, "O", &regexp))
         return NULL;
-    return strscan_do_scan(self, (StringRegexp *)regexp, 1, 0, 0);
+    return strscan_do_scan(self, regexp, 1, 0, 0);
 }
 
 
@@ -532,7 +532,7 @@ StringScanner_check_until(StringScanner *self, PyObject *args)
     PyObject *regexp;
     if (!PyArg_ParseTuple(args, "O", &regexp))
         return NULL;
-    return strscan_do_scan(self, (StringRegexp *)regexp, 0, 1, 0);
+    return strscan_do_scan(self, regexp, 0, 1, 0);
 }
 
 /*
@@ -559,7 +559,7 @@ StringScanner_search_full(StringScanner *self, PyObject *args, PyObject *kwds)
         s = 0;
     if (py_f == Py_False)
         f = 0;
-    return strscan_do_scan(self, (StringRegexp *)regexp, s, f, 0);
+    return strscan_do_scan(self, regexp, s, f, 0);
 }
 
 /*
@@ -605,7 +605,7 @@ StringScanner_peek(StringScanner *self, PyObject *args)
  *   s.unscan             # ScanError: unscan failed: previous match record not exist
  */
 static PyObject *
-StringScanner_unscan(StringScanner *self)
+StringScanner_unscan_p(StringScanner *self)
 {
     strscanner *p;
 
@@ -744,7 +744,7 @@ StringScanner_matched_size(StringScanner *self)
  *   s.post_match            # -> "string"
  */
 static PyObject *
-StringScanner_pre_match(StringScanner *self)
+StringScanner_pre_match_p(StringScanner *self)
 {
     strscanner *p;
 
@@ -763,7 +763,7 @@ StringScanner_pre_match(StringScanner *self)
  *   s.post_match            # -> "string"
  */
 static PyObject *
-StringScanner_post_match(StringScanner *self)
+StringScanner_post_match_p(StringScanner *self)
 {
     strscanner *p;
 
@@ -794,7 +794,7 @@ adjust_registers_to_matched(strscanner *p)
  *   s.getch           # => nil
  */
 static PyObject *
-StringScanner_getch(StringScanner *self)
+StringScanner_getch_p(StringScanner *self)
 {
     strscanner *p;
     long len;
@@ -854,7 +854,6 @@ StringScanner_get_byte(StringScanner *self)
 
 static PyMethodDef StringScanner_methods[] = {
     {"reset", (PyCFunction)StringScanner_scan, METH_NOARGS, "reset"},
-    {"terminate", (PyCFunction)StringScanner_terminate, METH_NOARGS, "terminate"},
     {"scan", (PyCFunction)StringScanner_scan, METH_VARARGS, "scan"},
     {"match_count", (PyCFunction)StringScanner_match_p, METH_VARARGS, "match_count"},
     {"skip", (PyCFunction)StringScanner_skip, METH_VARARGS, "skip"},
@@ -865,12 +864,8 @@ static PyMethodDef StringScanner_methods[] = {
     {"check_until", (PyCFunction)StringScanner_check_until, METH_VARARGS, "check_until"},
     {"search_full", (PyCFunction)StringScanner_search_full, METH_VARARGS | METH_KEYWORDS, "search_full"},
     {"peek", (PyCFunction)StringScanner_peek, METH_VARARGS, "peek"},
-    {"unscan", (PyCFunction)StringScanner_unscan, METH_NOARGS, "unscan"},
-    {"getch", (PyCFunction)StringScanner_getch, METH_NOARGS, "getch"},
     {"get_byte", (PyCFunction)StringScanner_get_byte, METH_NOARGS, "get_byte"},
-    {"exist", (PyCFunction)StringScanner_exist_p, METH_VARARGS, "exist"},
-    {"pre_match", (PyCFunction)StringScanner_pre_match, METH_NOARGS, "pre_match"},
-    {"post_match", (PyCFunction)StringScanner_post_match, METH_NOARGS, "post_match"},
+    {"exists", (PyCFunction)StringScanner_exists_p, METH_VARARGS, "exists"},
     {NULL}  /* Sentinel */
 };
 
@@ -968,8 +963,8 @@ StringScanner_rest_size__get__(StringScanner *self)
 
 static PyGetSetDef StringScanner_getsetter[] = {
     {"pos", (getter) StringScanner_pos__get__, (setter) StringScanner_pos__set__, "pos", NULL},
-    {"bol", (getter) StringScanner_bol_p, NULL, "bol", NULL},
-    {"eos", (getter) StringScanner_eos_p, NULL, "eos", NULL},
+    {"is_bol", (getter) StringScanner_bol_p, NULL, "is_bol", NULL},
+    {"is_eos", (getter) StringScanner_eos_p, NULL, "is_eos", NULL},
     {"is_matched", (getter) StringScanner_matched_p, NULL, "is_matched", NULL},
     {"matched", (getter) StringScanner_matched, NULL, "matched", NULL},
     {"matched_size", (getter) StringScanner_matched_size, NULL, "matched_size", NULL},
@@ -977,6 +972,11 @@ static PyGetSetDef StringScanner_getsetter[] = {
     {"is_rest", (getter) StringScanner_rest_p, NULL, "is_rest", NULL},
     {"rest", (getter) StringScanner_rest__get__, NULL, "rest", NULL},
     {"rest_size", (getter) StringScanner_rest_size__get__, NULL, "rest_size", NULL},
+    {"terminate", (getter) StringScanner_terminate_p, NULL, "terminate", NULL},
+    {"getch", (getter) StringScanner_getch_p, NULL, "getch", NULL},
+    {"unscan", (getter) StringScanner_unscan_p, NULL, "unscan", NULL},
+    {"post_match", (getter) StringScanner_post_match_p, NULL, "post_match", NULL},
+    {"pre_match", (getter) StringScanner_pre_match_p, NULL, "pre_match", NULL},
     {NULL}
 };
 

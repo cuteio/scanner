@@ -2,10 +2,9 @@
 
 import unittest
 from scanner import StringScanner
-from scanner import StringRegexp
 
 
-class TestScanner(unittest.TestCase):
+class TestString(unittest.TestCase):
 
     def setUp(self):
         self.string = 'hello'
@@ -31,29 +30,29 @@ class TestScanner(unittest.TestCase):
 
     def test_rest(self):
         s = self.strscan
-        s.scan(StringRegexp('hel'))
+        s.scan('hel')
         assert self.string == s.string
 
     def test_matched(self):
         s = self.strscan
-        s.scan(StringRegexp('hel'))
+        s.scan('hel')
         assert 'hel' == s.matched
 
     def test_pre_match(self):
         s = self.strscan
-        assert 2 == s.skip(StringRegexp('he'))
-        assert 'll' == s.scan(StringRegexp('ll'))
+        assert 2 == s.skip('he')
+        assert 'll' == s.scan('ll')
         assert 'he' == s.pre_match
 
     def test_post_match(self):
         s = self.strscan
-        s.skip(StringRegexp('he'))
-        s.scan(StringRegexp('ll'))
+        s.skip('he')
+        s.scan('ll')
         assert 'o' == s.post_match
 
     def test_unscan(self):
         s = self.strscan
-        s.skip(StringRegexp('he'))
+        s.skip('he')
         assert 'llo' == s.rest
         s.unscan
         assert 0 == s.pos
@@ -75,34 +74,34 @@ class TestScanner(unittest.TestCase):
 
     def test_scan_full(self):
         s = self.strscan
-        assert None == s.scan_full(StringRegexp("l"))
-        assert 'he' == s.scan_full(StringRegexp("he"))
+        assert None == s.scan_full("l")
+        assert 'he' == s.scan_full("he")
         assert 2 == s.pos
-        assert 'll' == s.scan_full(StringRegexp('ll'), advance_pointer=False)
+        assert 'll' == s.scan_full('ll', advance_pointer=False)
         assert 2 == s.pos
-        assert 2 == s.scan_full(StringRegexp('ll'), advance_pointer=False, return_string=False)
+        assert 2 == s.scan_full('ll', advance_pointer=False, return_string=False)
         assert 2 == s.pos
 
     def test_search_full(self):
         s = self.strscan
-        assert 'he' == s.search_full(StringRegexp('e'))
+        assert 'he' == s.search_full('e')
         assert 2 == s.pos
-        assert 'llo' == s.search_full(StringRegexp('lo'), advance_pointer=False)
+        assert 'llo' == s.search_full('lo', advance_pointer=False)
         assert 2 == s.pos
-        assert 3 == s.search_full(StringRegexp('o'), advance_pointer=False, return_string=False)
+        assert 3 == s.search_full('o', advance_pointer=False, return_string=False)
 
     def test_scan(self):
         s = self.strscan
         assert 0 == s.pos
-        s.scan(StringRegexp('world'))
-        s.scan(StringRegexp('luo'))
+        s.scan('world')
+        s.scan('luo')
         assert 0 == s.pos
-        assert 'hel' == s.scan(StringRegexp('hel'))
+        assert 'hel' == s.scan('hel')
         assert 3 == s.pos
 
     def test_scan_until(self):
         s = self.strscan
-        assert 'hel' == s.scan_until(StringRegexp('el'))
+        assert 'hel' == s.scan_until('el')
         assert 3 == s.pos
 
     # what is "upto"?
@@ -118,25 +117,25 @@ class TestScanner(unittest.TestCase):
 
     def test_skip(self):
         s = self.strscan
-        assert 3 == s.skip(StringRegexp('hel'))
+        assert 3 == s.skip('hel')
 
     def test_skip_unitl(self):
         s = self.strscan
-        assert 3 == s.skip_until(StringRegexp('l'))
+        assert 3 == s.skip_until('l')
 
     def test_check(self):
         s = self.strscan
-        assert 'hell' == s.check(StringRegexp('hell'))
+        assert 'hell' == s.check('hell')
         assert 0 == s.pos
 
     def test_check_until(self):
         s = self.strscan
-        assert 'hell' == s.check(StringRegexp('hell'))
+        assert 'hell' == s.check('hell')
         assert 0 == s.pos
 
     def test_exist(self):
         s = self.strscan
-        assert 3 == s.exists(StringRegexp('l'))
+        assert 3 == s.exists('l')
         assert 0 == s.pos
 
     # FIXME 我把你偷懒的 2 个 unittext 也拿过来的，检查一下 coords 嘛
