@@ -43,6 +43,7 @@ typedef struct {
 
 int regexp_init(StringRegexp *, PyObject *);
 void regexp_delloc(StringRegexp *);
+int init_python_syntax(void);
 
 #ifdef __cplusplus
 }
