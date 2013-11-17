@@ -114,7 +114,8 @@ str_new(strscanner *p, const char *ptr, long len)
 static PyObject *
 extract_range(strscanner *p, long beg_i, long end_i)
 {
-    if (beg_i > S_LEN(p)) return Py_None;
+    if (beg_i > S_LEN(p))
+        Py_RETURN_NONE;
     if (end_i > S_LEN(p))
         end_i = S_LEN(p);
     return infect(str_new(p, S_PBEG(p) + beg_i, end_i - beg_i), p);
@@ -123,7 +124,8 @@ extract_range(strscanner *p, long beg_i, long end_i)
 static PyObject *
 extract_beg_len(strscanner *p, long beg_i, long len)
 {
-    if (beg_i > S_LEN(p)) return Py_None;
+    if (beg_i > S_LEN(p))
+        Py_RETURN_NONE;
     if (beg_i + len > S_LEN(p))
         len = S_LEN(p) - beg_i;
     return infect(str_new(p, S_PBEG(p) + beg_i, len), p);
@@ -252,7 +254,7 @@ _strscan_do_scan(StringScanner *self, StringRegexp *regexp, int cuccptr, int get
     }
 
     if (S_RESTLEN(p) < 0) {
-        return Py_None;
+        Py_RETURN_NONE;
     }
 
     if (headonly) {
@@ -273,7 +275,7 @@ _strscan_do_scan(StringScanner *self, StringRegexp *regexp, int cuccptr, int get
 
     if (ret < 0) {
         /* not matched */
-        return Py_None;
+        Py_RETURN_NONE;
     }
 
     MATCHED(p);
@@ -719,7 +721,8 @@ StringScanner_matched(StringScanner *self)
     strscanner *p;
 
     p = self->p;
-    if (!MATCHED_P(p)) return Py_None;
+    if (!MATCHED_P(p))
+        Py_RETURN_NONE;
     return extract_range(p, p->prev + p->regs.beg[0],
                             p->prev + p->regs.end[0]);
 }
@@ -740,7 +743,8 @@ StringScanner_matched_size(StringScanner *self)
     strscanner *p;
 
     p = self->p;
-    if (!MATCHED_P(p)) return Py_None;
+    if (!MATCHED_P(p))
+        Py_RETURN_NONE;
     return PyInt_FromLong(p->regs.end[0] - p->regs.beg[0]);
 }
 
@@ -759,7 +763,8 @@ StringScanner_pre_match_p(StringScanner *self)
     strscanner *p;
 
     p = self->p;
-    if (! MATCHED_P(p)) return Py_None;
+    if (! MATCHED_P(p))
+        Py_RETURN_NONE;
     return extract_range(p, 0, p->prev + p->regs.beg[0]);
 }
 
@@ -778,7 +783,8 @@ StringScanner_post_match_p(StringScanner *self)
     strscanner *p;
 
     p = self->p;
-    if (! MATCHED_P(p)) return Py_None;
+    if (! MATCHED_P(p))
+        Py_RETURN_NONE;
     return extract_range(p, p->prev + p->regs.end[0], S_LEN(p));
 }
 
