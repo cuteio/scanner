@@ -637,9 +637,13 @@ StringScanner_bol_p(StringScanner *self)
     strscanner *p;
 
     p = self->p;
-    if (CURPTR(p) > S_PEND(p)) return Py_None;
-    if (p->curr == 0) return Py_True;
-    return (*(CURPTR(p) - 1) == '\n') ? Py_True : Py_False;
+    if (CURPTR(p) > S_PEND(p))
+        Py_RETURN_FALSE;
+    if (p->curr == 0)
+        Py_RETURN_TRUE;
+    if (*(CURPTR(p) - 1) == '\n')
+        Py_RETURN_TRUE;
+    Py_RETURN_FALSE;
 }
 
 /*
@@ -658,7 +662,9 @@ StringScanner_eos_p(StringScanner *self)
     strscanner *p;
 
     p = self->p;
-    return EOS_P(p) ? Py_True : Py_False;
+    if (EOS_P(p))
+        Py_RETURN_TRUE;
+    Py_RETURN_FALSE;
 }
 
 /*
@@ -675,7 +681,9 @@ StringScanner_rest_p(StringScanner *self)
     strscanner *p;
 
     p = self->p;
-    return EOS_P(p) ? Py_False : Py_True;
+    if (EOS_P(p))
+        Py_RETURN_FALSE;
+    Py_RETURN_TRUE;
 }
 
 /*
@@ -693,7 +701,9 @@ StringScanner_matched_p(StringScanner *self)
     strscanner *p;
 
     p = self->p;
-    return MATCHED_P(p) ? Py_True : Py_False;
+    if (MATCHED_P(p))
+        Py_RETURN_TRUE;
+    Py_RETURN_FALSE;
 }
 
 /*
@@ -802,14 +812,17 @@ StringScanner_getch_p(StringScanner *self)
     p = self->p;
     CLEAR_MATCH_STATUS(p);
     if (EOS_P(p))
-        return Py_None;
+        Py_RETURN_NONE;
 
     // FIXME: unicode
     //len = rb_enc_mbclen(CURPTR(p), S_PEND(p), rb_enc_get(p->str));
     //if (p->curr + len > S_LEN(p)) {
     //    len = S_LEN(p) - p->curr;
     //}
-    len = 1; // FIX
+    if (p->unicode)
+        len = sizeof(Py_UNICODE);
+    else
+        len = 1;
     p->prev = p->curr;
     p->curr += len;
     MATCHED(p);
@@ -842,7 +855,7 @@ StringScanner_get_byte(StringScanner *self)
     p = self->p;
     CLEAR_MATCH_STATUS(p);
     if (EOS_P(p))
-        return Py_None;
+        Py_RETURN_NONE;
 
     p->prev = p->curr;
     p->curr++;
@@ -853,7 +866,7 @@ StringScanner_get_byte(StringScanner *self)
 }
 
 static PyMethodDef StringScanner_methods[] = {
-    {"reset", (PyCFunction)StringScanner_scan, METH_NOARGS, "reset"},
+    {"reset", (PyCFunction)StringScanner_reset, METH_NOARGS, "reset"},
     {"scan", (PyCFunction)StringScanner_scan, METH_VARARGS, "scan"},
     {"match_count", (PyCFunction)StringScanner_match_p, METH_VARARGS, "match_count"},
     {"skip", (PyCFunction)StringScanner_skip, METH_VARARGS, "skip"},
@@ -1037,6 +1050,8 @@ PyMODINIT_FUNC
 initscanner(void)
 {
     PyObject* m;
+    if (init_python_syntax() < 0)
+        return;
 
     if (PyType_Ready(&scanner_StringScannerType) < 0)
         return;

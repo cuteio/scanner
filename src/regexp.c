@@ -7,6 +7,7 @@
  */
 static OnigSyntaxType OnigSyntaxPython;
 
+
 /**
  * Get the oniguruma encoding for a given integer. Because we don't forward
  * oniguruma encodings to the python space, we have to use something like that.
@@ -49,6 +50,29 @@ get_onig_encoding(int encoding)
         case 31: return ONIG_ENCODING_GB18030;
         default: return ONIG_ENCODING_UNDEF;
     }
+}
+
+/**
+ * initialize the python syntax based on the ruby one
+ */
+int
+init_python_syntax(void)
+{
+    onig_copy_syntax(&OnigSyntaxPython, ONIG_SYNTAX_RUBY);
+    int behavior = onig_get_syntax_behavior(&OnigSyntaxPython);
+
+    /* use the ruby settings but disable the use of the same
+       name for multiple groups, disable warnings for stupid
+       escapes and capture named and position groups */
+    onig_set_syntax_behavior(&OnigSyntaxPython,
+            behavior & ~(ONIG_SYN_CAPTURE_ONLY_NAMED_GROUP |
+                ONIG_SYN_ALLOW_MULTIPLEX_DEFINITION_NAME |
+                ONIG_SYN_WARN_CC_OP_NOT_ESCAPED |
+                ONIG_SYN_WARN_REDUNDANT_NESTED_REPEAT)
+            );
+    /* sre like singleline */
+    onig_set_syntax_options(&OnigSyntaxPython, ONIG_OPTION_NEGATE_SINGLELINE);
+    return 0;
 }
 
 /**
