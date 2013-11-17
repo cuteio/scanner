@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
-
-"""Setup file for pygit2."""
-
-from distutils.core import setup, Extension
-from subprocess import Popen, PIPE
 import os
 import sys
 import shutil
+
+from distutils.core import setup, Extension
+from subprocess import Popen, PIPE
+
 NAME = 'scanner'
-VERSION = '0.01'
+VERSION = '0.0.2'
 
 cwd = os.path.dirname(os.path.realpath(__file__))
 libonig_dir = os.path.join(cwd, 'vendor')
@@ -59,5 +58,8 @@ setup(name=NAME,
       url='http://github.com/liluo/scanner',
       author='liluo',
       author_email='i@liluo.org',
+
+      maintainer='xtao',
+      maintainer_email='xutao881001@gmail.com',
 
       ext_modules=[scanner_module])
