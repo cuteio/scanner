@@ -105,9 +105,11 @@ infect(PyObject *str, strscanner *p)
 static PyObject *
 str_new(strscanner *p, const char *ptr, long len)
 {
-    // TODO: check p->str encode
-    PyObject *str = PyString_FromStringAndSize(ptr, len);
-    //rb_enc_copy(str, p->str);
+    PyObject *str;
+    if (p->unicode)
+        str = PyUnicode_FromUnicode(ptr, len);
+    else
+        str = PyString_FromStringAndSize(ptr, len);
     return str;
 }
 
@@ -156,6 +158,7 @@ StringScanner_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
         CLEAR_MATCH_STATUS(p);
         onig_region_init(&(p->regs));
         p->str = Py_None;
+        Py_INCREF(Py_None);
         self->p = p;
     }
 
@@ -175,6 +178,7 @@ StringScanner_init(StringScanner *self, PyObject *args, PyObject *kwds)
         return -1;
 
     p = self->p;
+    Py_DECREF(p->str);
     p->str = string;
     if (PyString_Check(string)) {
         p->unicode = 0;
@@ -820,15 +824,12 @@ StringScanner_getch_p(StringScanner *self)
     if (EOS_P(p))
         Py_RETURN_NONE;
 
-    // FIXME: unicode
-    //len = rb_enc_mbclen(CURPTR(p), S_PEND(p), rb_enc_get(p->str));
-    //if (p->curr + len > S_LEN(p)) {
-    //    len = S_LEN(p) - p->curr;
-    //}
     if (p->unicode)
         len = sizeof(Py_UNICODE);
     else
         len = 1;
+    if (p->curr + len > S_LEN(p))
+        len = S_LEN(p) - p->curr;
     p->prev = p->curr;
     p->curr += len;
     MATCHED(p);
