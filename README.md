@@ -1,5 +1,5 @@
 # Scanner
-[![Build Status](https://travis-ci.org/liluo/scanner.png?branch=master)](https://travis-ci.org/liluo/scanner)  
+[![Build Status](https://travis-ci.org/cuteio/scanner.png?branch=master)](https://travis-ci.org/cuteio/scanner)  
 Scanner provides for lexical scanning operations on a String. Clone of [Ruby's StringScanner](http://ruby-doc.org/stdlib-2.0.0/libdoc/strscan/rdoc/StringScanner.html).  
 
 Here is an example of its usage:
@@ -101,6 +101,9 @@ unscan
 ```
 
 ### Changelog
+
+__v0.0.4[2013-11-19]__
+* Fix Python 2.7.3 `Segmentation fault`.
 
 __v0.0.3[2013-11-17]__
 
