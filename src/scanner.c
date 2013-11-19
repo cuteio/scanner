@@ -207,7 +207,7 @@ StringScanner_reset(StringScanner *self)
     p = self->p;
     p->curr = 0;
     CLEAR_MATCH_STATUS(p);
-    return (PyObject *)self;
+    Py_RETURN_NONE;
 }
 
 /*
@@ -225,7 +225,7 @@ StringScanner_terminate_p(StringScanner *self)
     p = self->p;
     p->curr = S_LEN(p);
     CLEAR_MATCH_STATUS(p);
-    return (PyObject *)self;
+    Py_RETURN_NONE;
 }
 
 static PyObject *
@@ -622,7 +622,7 @@ StringScanner_unscan_p(StringScanner *self)
     }
     p->curr = p->prev;
     CLEAR_MATCH_STATUS(p);
-    return (PyObject *)self;
+    Py_RETURN_NONE;
 }
 
 /*
@@ -926,6 +926,7 @@ StringScanner_string__get__(StringScanner *self)
     strscanner *p;
 
     p = self->p;
+    Py_INCREF(p->str);
     return p->str;
 }
 
@@ -945,7 +946,7 @@ StringScanner_string__set__(StringScanner *self, PyObject *str)
     //p->str = str;
     //p->curr = 0;
     //CLEAR_MATCH_STATUS(p);
-    return str;
+    Py_RETURN_NONE;
 }
 
 /*
