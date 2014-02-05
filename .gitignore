@@ -36,3 +36,5 @@ nosetests.xml
 vendor/onig-*
 vendor/libonig.a
 !vendor/onig-*.tar.gz
+venv
+.ropeproject
