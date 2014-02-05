@@ -24,6 +24,14 @@ class TestScanner(unittest.TestCase):
         s.getch
         assert 'l' == s.getch
 
+    def test_pos(self):
+        s = self.strscan
+        pos = s.pos
+        assert 'h' == s.getch
+        assert s.pos == (pos + 1)
+        s.pos = s.pos + 1
+        assert 'l' == s.getch
+
     def test_peek(self):
         s = self.strscan
         r = s.peek(4)
