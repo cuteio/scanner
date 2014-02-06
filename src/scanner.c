@@ -896,7 +896,7 @@ StringScanner_pos__get__(StringScanner *self)
     return PyInt_FromLong(p->curr);
 }
 
-static PyObject *
+static int
 StringScanner_pos__set__(StringScanner *self, PyObject *v)
 {
     strscanner *p;
@@ -907,14 +907,14 @@ StringScanner_pos__set__(StringScanner *self, PyObject *v)
     if (i < 0) i += S_LEN(p);
     if (i < 0) {
         PyErr_SetString(PyExc_IndexError, "index out of range");
-        return NULL;
+        return -1;
     }
     if (i > S_LEN(p)) {
         PyErr_SetString(PyExc_IndexError, "index out of range");
-        return NULL;
+        return -1;
     }
     p->curr = i;
-    return PyInt_FromLong(i);
+    return 0;
 }
 
 /*
@@ -936,7 +936,7 @@ StringScanner_string__get__(StringScanner *self)
  * Changes the string being scanned to +str+ and resets the scanner.
  * Returns +str+.
  */
-static PyObject *
+static int
 StringScanner_string__set__(StringScanner *self, PyObject *str)
 {
     // TODO: string setter
@@ -946,7 +946,7 @@ StringScanner_string__set__(StringScanner *self, PyObject *str)
     //p->str = str;
     //p->curr = 0;
     //CLEAR_MATCH_STATUS(p);
-    Py_RETURN_NONE;
+    return -1;
 }
 
 /*
