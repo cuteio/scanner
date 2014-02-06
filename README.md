@@ -6,7 +6,7 @@ Here is an example of its usage:
 
 ```
 from scanner import StringScanner, StringRegexp
-s = StringScanner.new('This is an example string')
+s = StringScanner('This is an example string')
 s.is_eos             # -> False
 
 print s.scan(StringRegexp('\w+'))  # -> "This"
