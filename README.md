@@ -102,6 +102,9 @@ unscan
 
 ### Changelog
 
+__v0.0.5[2014-02-07]__
+* Fix the setter prototype and return value 
+
 __v0.0.4[2013-11-19]__
 * Fix Python 2.7.3 `Segmentation fault`.
 
