@@ -101,7 +101,7 @@ static void
 StringRegexp_dealloc(StringRegexp *self)
 {
     regexp_delloc(self);
-    self->ob_type->tp_free((PyObject*)self);
+    Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 void
@@ -143,12 +143,12 @@ regexp_init(StringRegexp *self, PyObject *pattern)
         pstr = (UChar *) PyUnicode_AS_UNICODE(pattern);
         pend = pstr + (PyUnicode_GET_SIZE(pattern) * sizeof(PY_UNICODE_TYPE));
         self->unicode = 1;
-    } else if (PyString_Check(pattern)) {
+    } else if (PyBytes_Check(pattern)) {
         /* FIXME: to unicode */
         if (ienc == -1) ienc = 0;
         enc = get_onig_encoding(ienc);
-        pstr = (UChar *) PyString_AS_STRING(pattern);
-        pend = pstr + PyString_GET_SIZE(pattern);
+        pstr = (UChar *) PyBytes_AS_STRING(pattern);
+        pend = pstr + PyBytes_GET_SIZE(pattern);
         self->unicode = 0;
     } else {
         PyErr_SetString(PyExc_TypeError, "pattern must be string or unicode");
@@ -198,8 +198,7 @@ static PyMethodDef StringRegexp_methods[] = {
 };
 
 PyTypeObject scanner_StringRegexpType = {
-    PyObject_HEAD_INIT(NULL)
-    0,                                         /*ob_size*/
+    PyVarObject_HEAD_INIT(NULL, 0)             /*ob_size*/
     "scanner.StringRegexp",                     /*tp_name*/
     sizeof(StringRegexp),                       /*tp_basicsize*/
     0,                                         /*tp_itemsize*/
