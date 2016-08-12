@@ -1108,15 +1108,27 @@ static struct PyModuleDef moduledef = {
 
 MOD_INIT(scanner)
 {
-    PyObject* m;
+    PyObject* m = NULL;
     if (init_python_syntax() < 0)
+#if PY_MAJOR_VERSION >= 3
+        return m;
+#else
         return;
+#endif
 
     if (PyType_Ready(&scanner_StringScannerType) < 0)
+#if PY_MAJOR_VERSION >= 3
+        return m;
+#else
         return;
+#endif
 
     if (PyType_Ready(&scanner_StringRegexpType) < 0)
+#if PY_MAJOR_VERSION >= 3
+        return m;
+#else
         return;
+#endif
 
 #if PY_MAJOR_VERSION >= 3
     m = PyModule_Create(&moduledef);
