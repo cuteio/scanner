@@ -7,7 +7,7 @@ from distutils.core import setup, Extension
 from subprocess import Popen, PIPE
 
 NAME = 'scanner'
-VERSION = '0.0.5'
+VERSION = '0.1.0'
 
 cwd = os.path.dirname(os.path.realpath(__file__))
 libonig_dir = os.path.join(cwd, 'vendor')
