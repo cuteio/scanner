@@ -55,7 +55,7 @@ setup(name=NAME,
       description="Scanner is like Ruby's StringScanner",
 
       license='MIT License',
-      url='http://github.com/liluo/scanner',
+      url='http://github.com/cuteio/scanner',
       author='liluo',
       author_email='i@liluo.org',
 
